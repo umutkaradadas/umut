@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Remix: CareTrust - İstanbul Doktor Güvenilirlik ve Tedavi Sicili",
+  "description": "Hastaların doğrulanmış uzman hekimleri arayabileceği, gerçek güvenilirlik puanlarını analiz edebileceği ve şifreli tedavi yolculuklarını güvenle paylaşabileceği şeffaf sağlık platformu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

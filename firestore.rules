@@ -1,0 +1,197 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-&]+$'); 
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isNumber(val) { return val is int || val is float; }
+
+    function isValidAppointment(data) {
+      let reqKeys = ['id', 'doctorId', 'doctorName', 'doctorSpecialty', 'patientName', 'patientEmail', 'patientUid', 'date', 'timeSlot', 'complaint', 'consultationType', 'status'];
+      return data.keys().hasAll(reqKeys) &&
+             (data.keys().size() == 12 || (data.keys().size() == 13 && data.keys().hasAll(['previousDiagnoses']))) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.doctorId is string && data.doctorId.size() <= 128 &&
+             data.doctorName is string && data.doctorName.size() <= 150 &&
+             data.doctorSpecialty is string && data.doctorSpecialty.size() <= 100 &&
+             data.patientName is string && data.patientName.size() <= 150 &&
+             data.patientEmail is string && data.patientEmail.size() <= 150 &&
+             data.patientUid is string && data.patientUid.size() <= 128 &&
+             data.date is string && data.date.size() <= 50 &&
+             data.timeSlot is string && data.timeSlot.size() <= 50 &&
+             data.complaint is string && data.complaint.size() <= 1000 &&
+             (!data.keys().hasAll(['previousDiagnoses']) || data.previousDiagnoses is string && data.previousDiagnoses.size() <= 1000) &&
+             (data.consultationType == 'Yüz yüze' || data.consultationType == 'Online Video') &&
+             (data.status == 'Onaylandı' || data.status == 'Beklemede' || data.status == 'İptal Edildi');
+    }
+
+    function isReferenceData(data) {
+      return data.keys().hasAll(['id', 'label', 'isActive']) &&
+             data.keys().size() == 3 &&
+             data.id is string && data.id.size() <= 128 &&
+             data.label is string && data.label.size() <= 100 &&
+             data.isActive is bool;
+    }
+
+    function isValidUser(data, userId) {
+      return data.keys().hasAll(['uid', 'fullName', 'email', 'role', 'createdAt']) &&
+             data.keys().size() == 5 &&
+             data.uid == userId &&
+             data.fullName is string && data.fullName.size() <= 100 &&
+             data.email is string && data.email.size() <= 150 &&
+             (data.role == 'doctor' || data.role == 'patient');
+    }
+
+    function isValidDoctorProfile(data, userId) {
+      let reqKeys = ['uid', 'currentTitle', 'hospitalClinicAffiliation', 'graduationYear', 'medicalSpecialty', 'focusAreas', 'procedures', 'patientCapacityStatus', 'preferredCommunicationMode', 'biography', 'pending_verification'];
+      return data.keys().hasAll(reqKeys) &&
+             data.uid == userId &&
+             data.currentTitle is string && data.currentTitle.size() <= 100 &&
+             data.hospitalClinicAffiliation is string && data.hospitalClinicAffiliation.size() <= 150 &&
+             isNumber(data.graduationYear) &&
+             data.medicalSpecialty is list && data.medicalSpecialty.size() <= 2 &&
+             (data.medicalSpecialty.size() == 0 || data.medicalSpecialty[0] is string) &&
+             data.focusAreas is list && data.focusAreas.size() <= 5 &&
+             (data.focusAreas.size() == 0 || data.focusAreas[0] is string) &&
+             data.procedures is list && data.procedures.size() <= 8 &&
+             (data.procedures.size() == 0 || data.procedures[0] is string) &&
+             (data.patientCapacityStatus == 'Accepting New Patients' || data.patientCapacityStatus == 'Consultations Only' || data.patientCapacityStatus == 'Not Accepting') &&
+             (data.preferredCommunicationMode == 'In-Clinic' || data.preferredCommunicationMode == 'Online Video Consultation' || data.preferredCommunicationMode == 'Both') &&
+             data.biography is string && data.biography.size() <= 400 &&
+             data.pending_verification is bool;
+    }
+
+    function isValidPatientProfile(data, userId) {
+      let reqKeys = ['uid', 'displayUsername', 'city', 'ageGroup', 'medicalInterests', 'experiencedSymptoms', 'healthJourney', 'expectations'];
+      return data.keys().hasAll(reqKeys) &&
+             data.uid == userId &&
+             data.displayUsername is string && data.displayUsername.size() <= 50 &&
+             data.city is string && data.city.size() <= 100 &&
+             (data.ageGroup == '18-24' || data.ageGroup == '25-34' || data.ageGroup == '35-44' || data.ageGroup == '45-54' || data.ageGroup == '55+') &&
+             data.medicalInterests is list && data.medicalInterests.size() <= 3 &&
+             (data.medicalInterests.size() == 0 || data.medicalInterests[0] is string) &&
+             data.experiencedSymptoms is list && data.experiencedSymptoms.size() <= 5 &&
+             (data.experiencedSymptoms.size() == 0 || data.experiencedSymptoms[0] is string) &&
+             data.healthJourney is string && data.healthJourney.size() <= 400 &&
+             data.expectations is string && data.expectations.size() <= 400;
+    }
+
+    function isValidDoctor(data) {
+      let reqKeys = ['id', 'name', 'title', 'specialty', 'hospital', 'city', 'imageUrl', 'rating', 'reviewsCount', 'credibilityRating', 'verifiedTreatments', 'experienceYears', 'satisfactionRate', 'about'];
+      return data.keys().hasAll(reqKeys) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 150 &&
+             data.title is string && data.title.size() <= 150 &&
+             data.specialty is string && data.specialty.size() <= 100 &&
+             data.hospital is string && data.hospital.size() <= 150 &&
+             data.city is string && data.city.size() <= 100 &&
+             data.imageUrl is string && data.imageUrl.size() <= 1000 &&
+             isNumber(data.rating) &&
+             isNumber(data.reviewsCount) &&
+             isNumber(data.credibilityRating) &&
+             isNumber(data.verifiedTreatments) &&
+             isNumber(data.experienceYears) &&
+             isNumber(data.satisfactionRate) &&
+             data.about is string && data.about.size() <= 2000;
+    }
+
+    function isValidReview(data) {
+      let reqKeys = ['id', 'treatmentType', 'patientIdCode', 'verified', 'date', 'summary', 'text', 'ratings', 'journey'];
+      return data.keys().hasAll(reqKeys) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.treatmentType is string && data.treatmentType.size() <= 150 &&
+             data.patientIdCode is string && data.patientIdCode.size() <= 200 &&
+             data.verified is bool &&
+             data.date is string && data.date.size() <= 50 &&
+             data.summary is string && data.summary.size() <= 300 &&
+             data.text is string && data.text.size() <= 2000 &&
+             data.ratings is map &&
+             data.ratings.keys().hasAll(['explanation', 'success', 'postOp']) &&
+             isNumber(data.ratings.explanation) && data.ratings.explanation >= 1 && data.ratings.explanation <= 5 &&
+             isNumber(data.ratings.success) && data.ratings.success >= 1 && data.ratings.success <= 5 &&
+             isNumber(data.ratings.postOp) && data.ratings.postOp >= 1 && data.ratings.postOp <= 5 &&
+             data.journey is list && data.journey.size() <= 3;
+    }
+
+
+    match /appointments/{appointmentId} {
+      allow read: if isSignedIn() && (resource.data.patientUid == request.auth.uid || resource.data.doctorId == request.auth.uid);
+      allow create: if isValidId(appointmentId) && isValidAppointment(incoming()) && (incoming().patientUid == 'guest-patient' || isOwner(incoming().patientUid));
+      allow update: if isSignedIn() && isValidId(appointmentId) && isValidAppointment(incoming()) &&
+                       (existing().patientUid == request.auth.uid || existing().doctorId == request.auth.uid) &&
+                       incoming().patientUid == existing().patientUid &&
+                       incoming().doctorId == existing().doctorId;
+      allow delete: if false;
+    }
+
+    match /specialties/{docId} {
+      allow read: if true;
+      allow create, update: if isValidId(docId) && isReferenceData(incoming());
+      allow delete: if false;
+    }
+
+    match /focusAreas/{docId} {
+      allow read: if true;
+      allow create, update: if isValidId(docId) && isReferenceData(incoming());
+      allow delete: if false;
+    }
+
+    match /procedures/{docId} {
+      allow read: if true;
+      allow create, update: if isValidId(docId) && isReferenceData(incoming());
+      allow delete: if false;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming(), userId) && incoming().createdAt is string;
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUser(incoming(), userId) &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().uid == existing().uid &&
+                       incoming().role == existing().role; 
+      allow delete: if false;
+    }
+
+    match /doctorProfiles/{userId} {
+      allow read: if isSignedIn(); // Publicly viewable
+      allow create: if isOwner(userId) && isValidId(userId) && isValidDoctorProfile(incoming(), userId) && exists(/databases/$(database)/documents/users/$(userId));
+      allow update: if isOwner(userId) && isValidId(userId) && isValidDoctorProfile(incoming(), userId) && 
+                       incoming().uid == existing().uid &&
+                       exists(/databases/$(database)/documents/users/$(userId));
+      allow delete: if false;
+    }
+
+    match /patientProfiles/{userId} {
+      allow read: if isOwner(userId); // Maybe conditionally allowed if they publish reviews, but for now private
+      allow create: if isOwner(userId) && isValidId(userId) && isValidPatientProfile(incoming(), userId) && exists(/databases/$(database)/documents/users/$(userId));
+      allow update: if isOwner(userId) && isValidId(userId) && isValidPatientProfile(incoming(), userId) && 
+                       incoming().uid == existing().uid &&
+                       exists(/databases/$(database)/documents/users/$(userId));
+      allow delete: if false;
+    }
+
+    match /doctors/{doctorId} {
+      allow read: if true;
+      allow create, update: if isValidId(doctorId) && isValidDoctor(incoming());
+      allow delete: if false;
+    }
+
+    match /doctors/{doctorId}/reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isValidId(reviewId) && isValidId(doctorId) && isValidReview(incoming()) && exists(/databases/$(database)/documents/doctors/$(doctorId));
+      allow update, delete: if false;
+    }
+
+  }
+}

@@ -1,0 +1,168 @@
+{
+  "entities": {
+    "ReferenceData": {
+      "title": "ReferenceData",
+      "description": "Common structure for specialties, focus areas, and procedures.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "label", "isActive"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User account document.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["doctor", "patient"] },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["uid", "fullName", "email", "role", "createdAt"]
+    },
+    "DoctorProfile": {
+      "title": "DoctorProfile",
+      "description": "Doctor profile info.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "currentTitle": { "type": "string" },
+        "hospitalClinicAffiliation": { "type": "string" },
+        "graduationYear": { "type": "number" },
+        "medicalSpecialty": { "type": "array" },
+        "focusAreas": { "type": "array" },
+        "procedures": { "type": "array" },
+        "patientCapacityStatus": { "type": "string", "enum": ["Accepting New Patients", "Consultations Only", "Not Accepting"] },
+        "preferredCommunicationMode": { "type": "string", "enum": ["In-Clinic", "Online Video Consultation", "Both"] },
+        "biography": { "type": "string" },
+        "pending_verification": { "type": "boolean" },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" }
+      },
+      "required": ["uid", "currentTitle", "hospitalClinicAffiliation", "graduationYear", "medicalSpecialty", "focusAreas", "procedures", "patientCapacityStatus", "preferredCommunicationMode", "pending_verification"]
+    },
+    "PatientProfile": {
+      "title": "PatientProfile",
+      "description": "Patient profile info.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayUsername": { "type": "string" },
+        "city": { "type": "string" },
+        "ageGroup": { "type": "string", "enum": ["18-24", "25-34", "35-44", "45-54", "55+"] },
+        "medicalInterests": { "type": "array" },
+        "experiencedSymptoms": { "type": "array" },
+        "healthJourney": { "type": "string" },
+        "expectations": { "type": "string" },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" }
+      },
+      "required": ["uid", "displayUsername", "city", "ageGroup", "medicalInterests", "experiencedSymptoms", "healthJourney", "expectations"]
+    },
+    "Doctor": {
+      "title": "Doctor",
+      "description": "Public doctor details used for search and reviews.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "title": { "type": "string" },
+        "specialty": { "type": "string" },
+        "hospital": { "type": "string" },
+        "city": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "rating": { "type": "number" },
+        "reviewsCount": { "type": "number" },
+        "credibilityRating": { "type": "number" },
+        "verifiedTreatments": { "type": "number" },
+        "experienceYears": { "type": "number" },
+        "satisfactionRate": { "type": "number" },
+        "about": { "type": "string" },
+        "education": { "type": "array" },
+        "specialInterests": { "type": "array" },
+        "timeline": { "type": "array" }
+      },
+      "required": ["id", "name", "title", "specialty", "hospital", "city", "imageUrl", "rating", "reviewsCount", "credibilityRating", "verifiedTreatments", "experienceYears", "satisfactionRate", "about"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Verified treatment review from a patient.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "treatmentType": { "type": "string" },
+        "patientIdCode": { "type": "string" },
+        "verified": { "type": "boolean" },
+        "date": { "type": "string" },
+        "summary": { "type": "string" },
+        "journey": { "type": "array" },
+        "text": { "type": "string" },
+        "ratings": { "type": "object" }
+      },
+      "required": ["id", "treatmentType", "patientIdCode", "verified", "date", "summary", "journey", "text", "ratings"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Appointment reservation booking details.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "doctorId": { "type": "string" },
+        "doctorName": { "type": "string" },
+        "doctorSpecialty": { "type": "string" },
+        "patientName": { "type": "string" },
+        "patientEmail": { "type": "string" },
+        "patientUid": { "type": "string" },
+        "date": { "type": "string" },
+        "timeSlot": { "type": "string" },
+        "complaint": { "type": "string" },
+        "previousDiagnoses": { "type": "string" },
+        "consultationType": { "type": "string", "enum": ["Yüz yüze", "Online Video"] },
+        "status": { "type": "string", "enum": ["Onaylandı", "Beklemede", "İptal Edildi"] }
+      },
+      "required": ["id", "doctorId", "doctorName", "doctorSpecialty", "patientName", "patientEmail", "patientUid", "date", "timeSlot", "complaint", "consultationType", "status"]
+    }
+  },
+  "firestore": {
+    "/appointments/{appointmentId}": {
+      "schema": { "$ref": "#/entities/Appointment" },
+      "description": "Booked medical appointments."
+    },
+    "/specialties/{docId}": {
+      "schema": { "$ref": "#/entities/ReferenceData" },
+      "description": "System provided list of specialties."
+    },
+    "/focusAreas/{docId}": {
+      "schema": { "$ref": "#/entities/ReferenceData" },
+      "description": "System provided list of focus areas."
+    },
+    "/procedures/{docId}": {
+      "schema": { "$ref": "#/entities/ReferenceData" },
+      "description": "System provided list of procedures."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/doctorProfiles/{userId}": {
+      "schema": { "$ref": "#/entities/DoctorProfile" },
+      "description": "Doctor public profiles."
+    },
+    "/patientProfiles/{userId}": {
+      "schema": { "$ref": "#/entities/PatientProfile" },
+      "description": "Patient public profiles."
+    },
+    "/doctors/{doctorId}": {
+      "schema": { "$ref": "#/entities/Doctor" },
+      "description": "Verified doctors directory"
+    },
+    "/doctors/{doctorId}/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/Review" },
+      "description": "Verified experiences for doctors"
+    }
+  }
+}
